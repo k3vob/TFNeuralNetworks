@@ -36,7 +36,7 @@ class NeuralNetwork(ABC):
                  hidden_activation='SIGMOID',
                  output_activation='SIGMOID'
                  ):
-        super().__init__()
+        # super().__init__()
         self.hidden_sizes = hidden_sizes
         self.num_inputs = num_inputs
         self.num_outputs = num_outputs

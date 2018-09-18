@@ -38,7 +38,7 @@
 # masked_labels:        [batch_size, num_unrollings, num_outputs]
 # masked_predictions    [batch_size, num_unrollings, num_outputs]
 
-from NeuralNetwork import NeuralNetwork
+from TFNeuralNetworks import NeuralNetwork
 import tensorflow as tf
 import tensorflow.contrib.rnn as tf_rnn
 import pandas as pd
