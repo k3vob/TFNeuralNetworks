@@ -1,3 +1,3 @@
-from . import NeuralNetwork
-from . import MLP
-from . import RNN
+import NeuralNetwork
+import MLP
+import RNN

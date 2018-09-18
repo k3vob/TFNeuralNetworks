@@ -1,4 +1,4 @@
-from TFNeuralNetworks import NeuralNetwork
+from NeuralNetwork import NeuralNetwork
 import tensorflow as tf
 
 
