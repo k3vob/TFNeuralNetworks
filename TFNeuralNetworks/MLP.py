@@ -1,4 +1,8 @@
-from NeuralNetwork import NeuralNetwork
+try:
+    from .NeuralNetwork import NeuralNetwork    # pip
+except Exception as e:
+    from NeuralNetwork import NeuralNetwork     # Local
+
 import tensorflow as tf
 
 

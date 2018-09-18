@@ -5,6 +5,7 @@
 # Only build graph when train method called
 # Automatically get 'num_unrollings'
 # Automatically get 'num_inputs' & 'num_outputs'
+# Masking only works when num_inputs == num_outputs
 # Single timestep for inference
 # Train, inference, forecast methods
 # Only run pad & mask when needed / Check to pad sequences automatically
@@ -38,7 +39,11 @@
 # masked_labels:        [batch_size, num_unrollings, num_outputs]
 # masked_predictions    [batch_size, num_unrollings, num_outputs]
 
-from NeuralNetwork import NeuralNetwork
+try:
+    from .NeuralNetwork import NeuralNetwork    # pip
+except Exception as e:
+    from NeuralNetwork import NeuralNetwork     # Local
+
 import tensorflow as tf
 import tensorflow.contrib.rnn as tf_rnn
 import pandas as pd
