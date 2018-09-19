@@ -2,11 +2,14 @@
 # TO DO
 # ################################################################
 #
-# Only build graph when train method called
+# Fix train and next_batch methods
+# Add testing data set and method
+# Single timestep for inference
+
+# Only build graph when train method called (if num_unrollings > max_length then num_unrollings = max_length)
 # Automatically get 'num_unrollings'
 # Automatically get 'num_inputs' & 'num_outputs'
 # Masking only works when num_inputs == num_outputs
-# Single timestep for inference
 # Train, inference, forecast methods
 # Only run pad & mask when needed / Check to pad sequences automatically
 # If padded, only return needed elements
@@ -95,16 +98,55 @@ class RNN(NeuralNetwork):
         masked_predictions = tf.boolean_mask(self.predictions, masks)
         return super().calculate_loss(masked_labels, masked_predictions)
 
-    def train(self, data, epochs, learning_rate, dropout_rate=0.0, print_step=1):
-        data, lengths = self.pad_data(data)
-        super().train(data, epochs, learning_rate, dropout_rate, print_step, {self.lengths: lengths})
+    def set_data(self, train_data):
+        train_data = self.create_data_dict(train_data)
+        super().set_data(train_data)
 
-    def next_batch(self):
+    def create_data_dict(self, df):
+        if isinstance(df.index, pd.MultiIndex):
+            dict = {index: df.loc[index] for index in df.index.levels[0]}
+        else:
+            dict = {0: df}
+        self.batch_ids = list(dict.keys())
+        return dict
+
+    def train(self, epochs, learning_rate, dropout_rate=0.0, batch_size=None, print_step=1):
+        self.train_data, lengths = self.pad_data(self.train_data)
+        self.sequence_cursor = 0
+        super().train(epochs, learning_rate, dropout_rate, batch_size, print_step, {self.lengths: lengths})
+
+    def next_batch(self, batch_size):
+        if not batch_size:
+            batch_size = len(self.train_data)
+
+        start_id = self.batch_cursor * batch_size
+        end_id = min((self.batch_cursor + 1) * batch_size, len(self.batch_ids))
+
+        start_row = self.sequence_cursor * self.num_unrollings
+        end_row = (self.sequence_cursor + 1) * self.num_unrollings
+
+        self.sequence_cursor += 1
+
+        sequence_complete = False
+        if end_row == self.train_data[self.batch_ids[0]].shape[0]:
+            self.sequence_cursor = 0
+            self.batch_cursor += 1
+            sequence_complete = True
+            self.reset_state()
+
+        batch_complete = False
+        if end_id == len(self.batch_ids):
+            batch_size = end_id - start_id
+            batch_complete = True
+
+        epoch_complete = sequence_complete and batch_complete
+
         inputs, labels = [], []
-        for df in self.data.values():
-            inputs.append(df.iloc[:, :self.num_inputs].values)
-            labels.append(df.iloc[:, -self.num_outputs:].values)
-        return inputs, labels
+        for id in self.batch_ids[start_id:end_id]:
+            df = self.train_data[id]
+            inputs.append(df.iloc[start_row:end_row, :self.num_inputs].values)
+            labels.append(df.iloc[start_row:end_row, -self.num_outputs:].values)
+        return inputs, labels, batch_size, epoch_complete
 
     def reset_state(self):
         self.state = self.zero_state
@@ -112,7 +154,7 @@ class RNN(NeuralNetwork):
     def pad_data(self, data):
         lengths = [[df.shape[0]] * self.num_inputs for df in data.values()]
         max_length = max([i[0] for i in lengths])
-        max_length = max_length if max_length % self.num_unrollings == 0 else max_length + self.num_unrollings
+        max_length = max_length if max_length % self.num_unrollings == 0 else max_length + self.num_unrollings - (max_length % self.num_unrollings)
         for id, df in data.items():
             padded_rows = pd.DataFrame({col: [0] * (max_length - df.shape[0]) for col in df.columns})
             data[id] = df.append(padded_rows)

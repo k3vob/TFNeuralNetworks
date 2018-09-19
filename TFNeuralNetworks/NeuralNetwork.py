@@ -2,7 +2,6 @@
 # TO DO
 # ################################################################
 #
-# Specify output activation (softmax & cross-entropy)
 # Specify GD algo
 # Correct private/public formatting
 # Correct method/variable naming conventions
@@ -71,29 +70,48 @@ class NeuralNetwork(ABC):
             predictions = self.predictions if predictions is None else predictions
             return tf.losses.mean_squared_error(labels=labels, predictions=predictions)
 
-    def train(self, data, epochs, learning_rate, dropout_rate=0.0, print_step=1, extra_dict={}):
-        self.data = data
-        inputs, labels = self.next_batch()
-        feed_dict = {
-            self.inputs: inputs,
-            self.labels: labels,
-            self.batch_size: len(inputs),
-            self.learning_rate: learning_rate,
-            self.dropout_rate: dropout_rate
-        }
-        feed_dict.update(extra_dict)
+    def set_data(self, train_data):
+        self.train_data = train_data
 
+    def train(self, epochs, learning_rate, dropout_rate=0.0, batch_size=None, print_step=1, extra_dict={}):
         for epoch in range(epochs):
-            _, loss = self.session.run([self.optimizer, self.loss], feed_dict)
-            if epoch == 0 or epoch % print_step == 0:
-                print("EPOCH:", epoch)
-                print("LOSS: ", loss, "\n")
+            epoch_complete = False
+            self.batch_cursor = 0
+            batch_losses = []
+            while not epoch_complete:
+                inputs, labels, batch_size, epoch_complete = self.next_batch(batch_size)
+                feed_dict = {
+                    self.inputs: inputs,
+                    self.labels: labels,
+                    self.batch_size: batch_size,
+                    self.learning_rate: learning_rate,
+                    self.dropout_rate: dropout_rate
+                }
+                feed_dict.update(extra_dict)
 
-    def next_batch(self):
-        # TEMPORARY ##################
-        inputs = self.data.iloc[:, :self.num_inputs]
-        labels = self.data.iloc[:, -self.num_outputs:]
-        return inputs, labels
+                _, batch_loss = self.session.run([self.optimizer, self.loss], feed_dict)
+                batch_losses.append(batch_loss)
+            if print_step > 0 and (epoch == 0 or epoch % print_step == 0):
+                print("EPOCH:", epoch)
+                print("LOSS: ", sum(batch_losses) / len(batch_losses), "\n")
+
+    def next_batch(self, batch_size):
+        if not batch_size:
+            batch_size = self.train_data.shape[0]
+
+        start_row = self.batch_cursor * batch_size
+        end_row = min((self.batch_cursor + 1) * batch_size, self.train_data.shape[0])
+
+        self.batch_cursor += 1
+
+        complete = False
+        if end_row == self.train_data.shape[0]:
+            batch_size = end_row - start_row
+            complete = True
+
+        inputs = self.train_data.iloc[start_row:end_row, :self.num_inputs]
+        labels = self.train_data.iloc[start_row:end_row, -self.num_outputs:]
+        return inputs, labels, batch_size, complete
 
     @abstractmethod
     def build_network(self):
