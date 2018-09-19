@@ -1,0 +1,11 @@
+README.md
+setup.py
+TFNeuralNetworks/MLP.py
+TFNeuralNetworks/NeuralNetwork.py
+TFNeuralNetworks/RNN.py
+TFNeuralNetworks/__init__.py
+TFNeuralNetworks/test.py
+TFNeuralNetworks.egg-info/PKG-INFO
+TFNeuralNetworks.egg-info/SOURCES.txt
+TFNeuralNetworks.egg-info/dependency_links.txt
+TFNeuralNetworks.egg-info/top_level.txt
