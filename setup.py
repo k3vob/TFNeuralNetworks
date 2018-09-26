@@ -5,7 +5,7 @@ with open("README.md", "r") as f:
 
 setuptools.setup(
     name="TFNeuralNetworks",
-    version="0.21",
+    version="0.3",
     author="Kevin O'Brien",
     author_email="kevin.vincent.obrien@gmail.com",
     description="A custom wrapper library for building highly encapsulated TensorFlow neural networks.",

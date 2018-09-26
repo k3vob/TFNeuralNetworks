@@ -1,12 +1,14 @@
 Metadata-Version: 2.1
 Name: TFNeuralNetworks
-Version: 0.21
+Version: 0.3
 Summary: A custom wrapper library for building highly encapsulated TensorFlow neural networks.
 Home-page: https://github.com/KevOBrien/TFNeuralNetworks
 Author: Kevin O'Brien
 Author-email: kevin.vincent.obrien@gmail.com
 License: MIT
 Description: # TFNeuralNetworks
+        
+        A custom built wrapper library for building highly encapsulated TensorFlow neural networks.
         
 Platform: UNKNOWN
 Description-Content-Type: text/markdown

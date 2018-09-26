@@ -9,7 +9,6 @@
 # Only build graph when train method called (if num_unrollings > max_length then num_unrollings = max_length)
 # Automatically get 'num_unrollings'
 # Automatically get 'num_inputs' & 'num_outputs'
-# Masking only works when num_inputs == num_outputs
 # Train, inference, forecast methods
 # Only run pad & mask when needed / Check to pad sequences automatically
 # If padded, only return needed elements
@@ -68,7 +67,7 @@ class RNN(NeuralNetwork):
         self.num_unrollings = num_unrollings
         self.inputs = tf.placeholder(tf.float32, shape=[None, num_unrollings, num_inputs], name='inputs')
         self.labels = tf.placeholder(tf.float32, shape=[None, num_unrollings, num_outputs], name='labels')
-        self.lengths = tf.placeholder(tf.int32, shape=[None, num_inputs], name='lengths')
+        self.lengths = tf.placeholder(tf.int32, shape=[None, num_outputs], name='lengths')
         self.output_weights = tf.Variable(tf.random_normal(shape=[hidden_sizes[-1], num_outputs]), name='output_weights')
         self.output_biases = tf.Variable(tf.random_normal(shape=[num_outputs]), name='output_biases')
         super().build_tf_graph()
@@ -155,7 +154,7 @@ class RNN(NeuralNetwork):
         return inputs, labels, batch_size, epoch_complete
 
     def pad_data(self, data):
-        lengths = [[df.shape[0]] * self.num_inputs for df in data.values()]
+        lengths = [[df.shape[0]] * self.num_outputs for df in data.values()]
         max_length = max([i[0] for i in lengths])
         max_length = max_length if max_length % self.num_unrollings == 0 else max_length + self.num_unrollings - (max_length % self.num_unrollings)
         for id, df in data.items():
