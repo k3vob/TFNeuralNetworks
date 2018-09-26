@@ -58,11 +58,11 @@ class RNN(NeuralNetwork):
                  num_inputs,
                  num_outputs,
                  hidden_sizes,
+                 num_unrollings,
                  output_activation='SIGMOID',
-                 num_unrollings=1,
                  cell='RNN'
                  ):
-        super().__init__(num_inputs, num_outputs, hidden_sizes, output_activation)
+        super().__init__(num_inputs=num_inputs, num_outputs=num_outputs, hidden_sizes=hidden_sizes, output_activation=output_activation)
         cell_types = {'RNN': tf_rnn.BasicRNNCell, 'LSTM': tf_rnn.BasicLSTMCell, 'GRU': tf_rnn.GRUCell}
         self.cell_type = cell_types[cell.upper()]
         self.num_unrollings = num_unrollings
@@ -98,9 +98,8 @@ class RNN(NeuralNetwork):
         masked_predictions = tf.boolean_mask(self.predictions, masks)
         return super().calculate_loss(masked_labels, masked_predictions)
 
-    def set_data(self, train_data):
-        train_data = self.create_data_dict(train_data)
-        super().set_data(train_data)
+    def reset_state(self):
+        self.state = self.zero_state
 
     def create_data_dict(self, df):
         if isinstance(df.index, pd.MultiIndex):
@@ -110,14 +109,21 @@ class RNN(NeuralNetwork):
         self.batch_ids = list(dict.keys())
         return dict
 
-    def train(self, epochs, learning_rate, dropout_rate=0.0, batch_size=None, print_step=1):
-        self.train_data, lengths = self.pad_data(self.train_data)
+    def train(self, data, epochs, learning_rate, dropout_rate=0.0, batch_size=None, print_step=1):
+        data = self.create_data_dict(data)
+        data, lengths = self.pad_data(data)
         self.sequence_cursor = 0
-        super().train(epochs, learning_rate, dropout_rate, batch_size, print_step, {self.lengths: lengths})
+        super().train(data, epochs, learning_rate, dropout_rate, batch_size, print_step, {self.lengths: lengths})
+
+    def test(self, data, batch_size=None):
+        data = self.create_data_dict(data)
+        data, lengths = self.pad_data(data)
+        self.sequence_cursor = 0
+        super().test(data, batch_size, {self.lengths: lengths})
 
     def next_batch(self, batch_size):
         if not batch_size:
-            batch_size = len(self.train_data)
+            batch_size = len(self.data)
 
         start_id = self.batch_cursor * batch_size
         end_id = min((self.batch_cursor + 1) * batch_size, len(self.batch_ids))
@@ -128,7 +134,7 @@ class RNN(NeuralNetwork):
         self.sequence_cursor += 1
 
         sequence_complete = False
-        if end_row == self.train_data[self.batch_ids[0]].shape[0]:
+        if end_row == self.data[self.batch_ids[0]].shape[0]:
             self.sequence_cursor = 0
             self.batch_cursor += 1
             sequence_complete = True
@@ -143,13 +149,10 @@ class RNN(NeuralNetwork):
 
         inputs, labels = [], []
         for id in self.batch_ids[start_id:end_id]:
-            df = self.train_data[id]
+            df = self.data[id]
             inputs.append(df.iloc[start_row:end_row, :self.num_inputs].values)
             labels.append(df.iloc[start_row:end_row, -self.num_outputs:].values)
         return inputs, labels, batch_size, epoch_complete
-
-    def reset_state(self):
-        self.state = self.zero_state
 
     def pad_data(self, data):
         lengths = [[df.shape[0]] * self.num_inputs for df in data.values()]

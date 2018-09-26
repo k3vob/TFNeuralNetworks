@@ -55,7 +55,7 @@ class NeuralNetwork(ABC):
         self.session = tf.Session()
         self.saver = tf.train.Saver()
         self.session.run(tf.global_variables_initializer())
-        self.session.graph.finalize()
+        # self.session.graph.finalize()
 
     def activate_ouputs(self):
         return self.output_activation(self.outputs)
@@ -70,10 +70,8 @@ class NeuralNetwork(ABC):
             predictions = self.predictions if predictions is None else predictions
             return tf.losses.mean_squared_error(labels=labels, predictions=predictions)
 
-    def set_data(self, train_data):
-        self.train_data = train_data
-
-    def train(self, epochs, learning_rate, dropout_rate=0.0, batch_size=None, print_step=1, extra_dict={}):
+    def train(self, data, epochs, learning_rate, dropout_rate=0.0, batch_size=None, print_step=1, extra_dict={}):
+        self.data = data
         for epoch in range(epochs):
             epoch_complete = False
             self.batch_cursor = 0
@@ -95,22 +93,47 @@ class NeuralNetwork(ABC):
                 print("EPOCH:", epoch)
                 print("LOSS: ", sum(batch_losses) / len(batch_losses), "\n")
 
+            # RETURN BEST LOSS AND SAVE MODEL
+
+    def test(self, data, batch_size=None, extra_dict={}):
+        self.data = data
+        self.batch_cursor = 0
+        batch_losses = []
+        testing_complete = False
+        while not testing_complete:
+            inputs, labels, batch_size, testing_complete = self.next_batch(batch_size)
+            feed_dict = {
+                self.inputs: inputs,
+                self.labels: labels,
+                self.batch_size: batch_size,
+                self.learning_rate: 0,
+                self.dropout_rate: 0
+            }
+            feed_dict.update(extra_dict)
+
+            batch_loss = self.session.run([self.loss], feed_dict)
+            batch_losses.append(batch_loss)
+        print(sum(batch_losses))
+        testing_loss = sum(batch_losses) / len(batch_losses)
+        print("LOSS:", testing_loss)
+        return testing_loss
+
     def next_batch(self, batch_size):
         if not batch_size:
-            batch_size = self.train_data.shape[0]
+            batch_size = self.data.shape[0]
 
         start_row = self.batch_cursor * batch_size
-        end_row = min((self.batch_cursor + 1) * batch_size, self.train_data.shape[0])
+        end_row = min((self.batch_cursor + 1) * batch_size, self.data.shape[0])
 
         self.batch_cursor += 1
 
         complete = False
-        if end_row == self.train_data.shape[0]:
+        if end_row == self.data.shape[0]:
             batch_size = end_row - start_row
             complete = True
 
-        inputs = self.train_data.iloc[start_row:end_row, :self.num_inputs]
-        labels = self.train_data.iloc[start_row:end_row, -self.num_outputs:]
+        inputs = self.data.iloc[start_row:end_row, :self.num_inputs]
+        labels = self.data.iloc[start_row:end_row, -self.num_outputs:]
         return inputs, labels, batch_size, complete
 
     @abstractmethod
