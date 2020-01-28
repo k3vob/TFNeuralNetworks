@@ -1,4 +1,4 @@
 setuptools==39.0.1
 pandas==0.23.3
 tensorflow_gpu==1.9.0
-tensorflow==1.10.1
+tensorflow==1.15.2
